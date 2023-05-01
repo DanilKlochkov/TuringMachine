@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -22,11 +23,12 @@ public class Main {
         while (alphabet.isEmpty()) {
             try {
                 String sybmols = br.readLine();
-                alphabet = Arrays.asList(sybmols.split(","));
+                alphabet.addAll(Arrays.asList(sybmols.split(",")));
             } catch (Exception e) {
                 System.out.println("Ошибка, попробуйте снова!");
             }
         }
+        alphabet.add("$");
         System.out.println("Введите алфавит состояний автоматов\nБуквой z отметьте конечные состояний\nВводите символы через запятую");
         while (stateAlphabet.isEmpty()) {
             try {
@@ -45,11 +47,11 @@ public class Main {
             try {
                 String[] rule = line.split("->");
                 String[] left = rule[0].trim().split(" ");
-                if (!stateAlphabet.contains(left[0]) || !alphabet.contains(left[1])) {
+                if (!stateAlphabet.contains(left[0]) || (!alphabet.contains(left[1]))) {
                     throw new RuntimeException();
                 }
                 String[] right = rule[1].trim().split(" ");
-                if (!stateAlphabet.contains(right[0]) || !alphabet.contains(right[1]) || !Arrays.asList("R", "L", "E").contains(right[2])) {
+                if (!stateAlphabet.contains(right[0]) || (!alphabet.contains(right[1])) || !Arrays.asList("R", "L", "E").contains(right[2])) {
                     throw new RuntimeException();
                 }
 
@@ -86,13 +88,18 @@ public class Main {
                 System.out.println("Такого состояния не представлена в вашем алфавите состояний!");
             }
         }
+        long start = System.currentTimeMillis();
         while (true) {
+            if (TimeUnit.SECONDS.convert((System.currentTimeMillis() - start), TimeUnit.MILLISECONDS) > 15) {
+                System.out.println("Программа выполняется дольше 15 секунд...");
+                break;
+            }
             String curr = tape.get(currentState.getKey());
-            if ("$".equals(curr)) {
+            String rule = currentState.getValue();
+            if ("$".equals(curr) && rules.stream().noneMatch(x -> x.getKey().getState().equals(rule) && x.getKey().getSymbol().equals(curr))) {
                 System.out.println("Конец ленты!");
                 break;
             }
-            String rule = currentState.getValue();
             System.out.println(rule + " : " + curr);
             List<Rule> turingRules = rules.stream().filter(x -> x.getKey().getState().equals(rule) && x.getKey().getSymbol().equals(curr)).collect(Collectors.toList());
             Rule turingRule = turingRules.get(0);
@@ -112,8 +119,6 @@ public class Main {
             } else {
                 currentState = new Pair<>(currentState.getKey(), turingRule.getValue().getNewState());
             }
-            System.out.println("New state: " + currentState.getKey() + " : " + currentState.getValue());
-            System.out.println();
             if (currentState.getValue().contains("z")) {
                 System.out.println("Конец программы");
                 break;
